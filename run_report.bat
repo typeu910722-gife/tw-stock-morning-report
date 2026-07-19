@@ -1,26 +1,25 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
+chcp 65001 >nul
 
-echo ==========================================
-echo 台股前一交易日晨報 V3
-echo ==========================================
+echo Starting Taiwan Stock Morning Report...
+echo.
 
-if not exist ".venv\Scripts\python.exe" (
-    echo [首次執行] 建立 Python 環境...
-    py -m venv .venv
-    if errorlevel 1 (
-        echo 找不到 Python。請先安裝 Python 3.11 以上版本。
-        pause
-        exit /b 1
-    )
+where py >nul 2>&1
+if not errorlevel 1 (
+    py -3 main.py
+    goto end
 )
 
-call ".venv\Scripts\activate.bat"
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+where python >nul 2>&1
+if not errorlevel 1 (
+    python main.py
+    goto end
+)
 
-echo.
-python main.py
+echo Python was not found.
+echo Please install Python 3 and enable Add Python to PATH.
+
+:end
 echo.
 pause

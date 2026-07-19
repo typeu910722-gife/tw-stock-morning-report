@@ -2,9 +2,11 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import os
 import webbrowser
 from pathlib import Path
 from src.pipeline import run_pipeline
+from src.webapp import build_mobile_site
 
 BASE = Path(__file__).resolve().parent
 (BASE / "logs").mkdir(exist_ok=True)
@@ -25,9 +27,11 @@ if __name__ == "__main__":
     cfg = load_config()
     try:
         output = run_pipeline(BASE, cfg)
-        print(f"\n[完成] {output}")
-        if cfg.get("open_report_after_run", True):
-            webbrowser.open(output.as_uri())
+        mobile_index = build_mobile_site(BASE, output)
+        print(f"\n[完成] 晨報：{output}")
+        print(f"[完成] 手機版：{mobile_index}")
+        if cfg.get("open_report_after_run", True) and not os.getenv("CI"):
+            webbrowser.open(mobile_index.as_uri())
     except Exception:
         logging.exception("執行失敗")
         print("\n[失敗] 請查看 logs\\report.log")

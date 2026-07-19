@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="台股晨報">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>台股晨報</title>
+  <style>
+    :root{--bg:#eef1f5;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#f4b400;--nav:#111827}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,"Microsoft JhengHei",sans-serif}
+    body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}.top{position:sticky;top:0;z-index:20;background:rgba(17,24,39,.96);color:white;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;backdrop-filter:blur(10px)}
+    .top-row{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:20px;font-weight:900}.sub{font-size:12px;color:#d1d5db;margin-top:3px}.actions{display:flex;gap:8px}.btn{border:0;border-radius:999px;padding:9px 12px;font-weight:800;cursor:pointer}.btn-primary{background:var(--accent);color:#111827}.btn-dark{background:#374151;color:#fff}
+    main{max-width:1280px;margin:14px auto;padding:0 12px}.panel{display:none}.panel.active{display:block}.frame-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,.08)}iframe{display:block;width:100%;height:calc(100vh - 154px - env(safe-area-inset-top));border:0;background:#fff}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 5px 20px rgba(0,0,0,.06)}h2{margin:0 0 12px}.history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.history-item:last-child{border-bottom:0}.history-link{font-weight:850;color:var(--text);text-decoration:none}.small{font-size:12px;color:var(--muted);line-height:1.6}.empty{padding:30px;text-align:center;color:var(--muted)}
+    .bottom{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);backdrop-filter:blur(12px)}.navbtn{border:0;background:transparent;border-radius:12px;padding:8px 4px;color:var(--muted);font-weight:800}.navbtn.active{background:#fff4cc;color:#111827}.navicon{display:block;font-size:21px;margin-bottom:2px}
+    .install-tip{display:none;margin-bottom:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:12px}.install-tip.show{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    @media(min-width:900px){body{padding-bottom:0}.bottom{position:sticky;top:75px;bottom:auto;max-width:420px;margin:10px auto;border:1px solid var(--line);border-radius:16px;padding:6px}.top{padding-top:12px}iframe{height:calc(100vh - 160px)}}
+  </style>
+</head>
+<body>
+<header class="top"><div class="top-row"><div><div class="brand">📈 台股晨報</div><div class="sub" id="updated">最新報告載入中</div></div><div class="actions"><button class="btn btn-dark" id="refreshBtn">更新</button><button class="btn btn-primary" id="installBtn" hidden>安裝</button></div></div></header>
+<nav class="bottom" aria-label="主要導覽"><button class="navbtn active" data-panel="today"><span class="navicon">☀️</span>今日</button><button class="navbtn" data-panel="history"><span class="navicon">🗂️</span>歷史</button><button class="navbtn" data-panel="about"><span class="navicon">⚙️</span>說明</button></nav>
+<main>
+<div id="installTip" class="install-tip"><div><b>可安裝到手機桌面</b><div class="small">安裝後能像 App 一樣開啟，並保留最近看過的報告。</div></div><button class="btn btn-primary" id="installTipBtn">安裝</button></div>
+<section id="today" class="panel active"><div class="frame-card"><iframe id="reportFrame" title="最新台股晨報" src="reports/latest.html"></iframe></div></section>
+<section id="history" class="panel"><div class="card"><h2>歷史晨報</h2><div id="historyList" class="empty">載入中</div></div></section>
+<section id="about" class="panel"><div class="grid"><div class="card"><h2>手機操作</h2><div>1. 在手機開啟這個網站。</div><div>2. 點「安裝」或瀏覽器選單中的「加到主畫面」。</div><div>3. 之後直接從桌面圖示打開。</div></div><div class="card"><h2>更新方式</h2><div>GitHub Actions 會在平日早上自動產生新報告。</div><div class="small">手機也可以到 GitHub 儲存庫的 Actions 頁面手動執行工作流程。</div></div><div class="card"><h2>產品範圍</h2><div>本專案只服務台股晨報、歷史報告與未來的自選股功能，不與其他品牌或系統混用。</div></div></div></section>
+</main>
+<script>
+let deferredPrompt=null;
+const panels=[...document.querySelectorAll('.panel')];
+const navs=[...document.querySelectorAll('.navbtn')];
+function showPanel(id){panels.forEach(x=>x.classList.toggle('active',x.id===id));navs.forEach(x=>x.classList.toggle('active',x.dataset.panel===id));location.hash=id==='today'?'':id;}
+navs.forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBtn').hidden=false;document.getElementById('installTip').classList.add('show')});
+async function install(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBtn').hidden=true;document.getElementById('installTip').classList.remove('show')}
+document.getElementById('installBtn').addEventListener('click',install);document.getElementById('installTipBtn').addEventListener('click',install);
+document.getElementById('refreshBtn').addEventListener('click',()=>{const f=document.getElementById('reportFrame');f.src='reports/latest.html?t='+Date.now();loadIndex()});
+async function loadIndex(){try{const r=await fetch('reports/index.json?'+Date.now());const data=await r.json();document.getElementById('updated').textContent='最新交易日 '+(data.latest_trade_date||'未知')+'｜更新 '+(data.generated||'');const list=document.getElementById('historyList');if(!data.reports?.length){list.className='empty';list.textContent='尚無歷史報告';return}list.className='';list.innerHTML=data.reports.map(x=>`<div class="history-item"><div><a class="history-link" target="reportFrame" href="${x.path}" onclick="showPanel('today')">${x.label}</a><div class="small">${x.filename}</div></div><span>›</span></div>`).join('')}catch(e){document.getElementById('historyList').textContent='歷史清單載入失敗'}}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+loadIndex();const initial=location.hash.replace('#','');if(initial)showPanel(initial);
+</script>
+</body></html>

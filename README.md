@@ -1,31 +1,31 @@
-# 台股前一交易日晨報 V3
+# 台股晨報 V5.0
 
-## 執行邏輯
+獨立的台股晨報 PWA。與映日所或其他品牌無關。
 
-程式會先向 TWSE 查詢最新已完成交易日，因此：
+## 電腦執行
 
-- 週六、週日執行：分析週五
-- 週一 07:40 執行：分析上週五
-- 週二 07:40 執行：分析週一
-- 報告檔名使用實際交易日，不使用電腦執行日
+雙擊 `run_report.bat`。程式會同時產生：
 
-## 使用
+- `outputs/.../台股日報_YYYYMMDD.html`
+- `site/index.html` 手機 App 版入口
 
-1. 解壓縮。
-2. 雙擊 `run_report.bat`。
-3. 報告位於 `outputs\YYYY\MM\台股日報_YYYYMMDD.html`。
-4. 需要自動排程時，以系統管理員身分執行 `install_schedule_0740.bat`。
+## 手機使用
 
-## 大盤資料
+1. 將專案 Push 到 GitHub。
+2. 儲存庫進入 `Settings → Pages → Source → GitHub Actions`。
+3. 進入 `Actions → Generate mobile stock report → Run workflow`。
+4. 部署完成後開啟 GitHub Pages 網址。
+5. Android Chrome 點網站上的「安裝」；iPhone Safari 點分享 → 加入主畫面。
 
-依序嘗試：
+## 自動更新
 
-1. TWSE 新版日資料端點
-2. TWSE 相容舊版端點
-3. Yahoo Finance `^TWII` 備援
+GitHub Actions 預設在台灣時間平日約 07:40 執行。GitHub 排程可能有幾分鐘延遲。
 
-因此不會因單一端點欄位變動就整塊顯示 N/A。附錄會註明實際資料來源。
+## V5.0
 
-## 注意
-
-本版不包含 Gmail 自動寄送。僅供研究與觀察，不構成投資建議。
+- 可安裝 PWA
+- 今日晨報首頁
+- 最近 60 份歷史晨報
+- 離線快取最近瀏覽內容
+- 手機底部導覽
+- GitHub Actions 自動發布

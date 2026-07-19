@@ -48,10 +48,18 @@ class Twse:
             "name": next(c for c in ["Name","證券名稱"] if c in df.columns),
             "value": next(c for c in ["TradeValue","成交金額"] if c in df.columns),
         }
+        def optional(names):
+            return next((c for c in names if c in df.columns), None)
+        close_col = optional(["ClosingPrice", "收盤價"])
+        change_col = optional(["Change", "漲跌價差"])
+        volume_col = optional(["TradeVolume", "成交股數"])
         out = pd.DataFrame({
             "code": df[cols["code"]].astype(str).str.strip(),
             "name": df[cols["name"]].astype(str).str.strip(),
             "trade_value": df[cols["value"]].map(num),
+            "close": df[close_col].map(num) if close_col else float("nan"),
+            "change": df[change_col].map(num) if change_col else float("nan"),
+            "volume": df[volume_col].map(num) if volume_col else float("nan"),
         })
         out = out[out["code"].str.fullmatch(r"\d{4}", na=False)]
         out = out[~out["code"].str.startswith("00")]
@@ -124,9 +132,13 @@ class Twse:
 
     def market_history(self, base_date):
         base = datetime.strptime(base_date, "%Y%m%d").date()
-        prev = base.replace(day=1) - timedelta(days=1)
+        months = []
+        cursor = base
+        for _ in range(4):
+            months.append(cursor.strftime("%Y%m%d"))
+            cursor = cursor.replace(day=1) - timedelta(days=1)
         frames, sources = [], []
-        for qd in [base.strftime("%Y%m%d"), prev.strftime("%Y%m%d")]:
+        for qd in months:
             df, src = self.market_month(qd)
             frames.append(df); sources.append(src)
         out = pd.concat(frames).drop_duplicates("date").sort_values("date").reset_index(drop=True)
@@ -141,3 +153,13 @@ class Twse:
         p = self.get(f"{self.BASE}/rwd/zh/announcement/punish",
                      {"startDate":start_date,"endDate":end_date,"response":"json"})
         return pd.DataFrame(p.get("data") or [], columns=p.get("fields") or [])
+
+    def notices(self):
+        """TWSE OpenAPI: 當日公布注意股票。欄位名稱可能調整，交由 pipeline 彈性解析。"""
+        rows = self.get(f"{self.OPEN}/announcement/notice")
+        return pd.DataFrame(rows if isinstance(rows, list) else [])
+
+    def punishment_openapi(self):
+        """TWSE OpenAPI 處置資訊備援。"""
+        rows = self.get(f"{self.OPEN}/announcement/punish")
+        return pd.DataFrame(rows if isinstance(rows, list) else [])
