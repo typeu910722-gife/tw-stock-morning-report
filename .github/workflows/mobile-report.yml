@@ -1,4 +1,4 @@
-name: Generate mobile stock report
+name: Generate mobile stock report V5
 
 on:
   workflow_dispatch:
