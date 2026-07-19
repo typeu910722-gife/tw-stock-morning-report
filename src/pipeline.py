@@ -309,8 +309,10 @@ def run_pipeline(base: Path, cfg: dict) -> Path:
     client = Twse(cfg.get("request_timeout", 25))
     base_date = client.latest_trade_date()
     print(f"[交易日] {base_date}")
-    top = client.top_turnover(cfg.get("top_n", 20))
-    print(f"[清單] 已取得成交值前 {len(top)} 檔")
+    top, top_source = client.top_turnover(cfg.get("top_n", 20), base_date)
+    print(f"[清單] 已取得 {len(top)} 檔（{top_source}）")
+    if not top_source.startswith("TWSE OpenAPI"):
+        notes.append(f"成交值清單改用：{top_source}")
 
     try:
         inst_df = client.institutional(base_date)
@@ -436,7 +438,7 @@ def run_pipeline(base: Path, cfg: dict) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"台股日報_{base_date}.html"
     write(out, {
-        "title": f"台股日報 {base_date}", "version": "V5.0", "trade_date": f"{base_date[:4]}/{base_date[4:6]}/{base_date[6:]}",
+        "title": f"台股日報 {base_date}", "version": "V5.1", "trade_date": f"{base_date[:4]}/{base_date[4:6]}/{base_date[6:]}",
         "generated": datetime.now().strftime("%Y/%m/%d %H:%M"), "one_liner": one,
         "global_lines": glines[:10] or ["國際盤資料暫缺"], "institution_summary": institution_summary,
         "bull": bull, "bear": bear, "picks": picks, "rows": rows,

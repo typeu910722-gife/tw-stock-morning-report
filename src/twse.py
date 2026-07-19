@@ -19,12 +19,23 @@ class Twse:
         })
 
     def get(self, url, params=None, retries=2):
+        """GET JSON with retries and a useful error when TWSE returns HTML/blank text."""
         last = None
         for i in range(retries + 1):
             try:
                 r = self.s.get(url, params=params, timeout=self.timeout)
                 r.raise_for_status()
-                data = r.json()
+                text = (r.text or "").strip()
+                if not text:
+                    raise RuntimeError(f"empty response (HTTP {r.status_code})")
+                try:
+                    data = r.json()
+                except ValueError as e:
+                    preview = text[:160].replace("\n", " ")
+                    raise RuntimeError(
+                        f"non-JSON response (HTTP {r.status_code}, "
+                        f"content-type={r.headers.get('content-type', '')}, body={preview!r})"
+                    ) from e
                 if isinstance(data, dict):
                     stat = str(data.get("stat", "")).upper()
                     if stat and stat != "OK":
@@ -40,13 +51,14 @@ class Twse:
         d = self.get(f"{self.BASE}/rwd/zh/afterTrading/MI_INDEX20", {"response":"json"})
         return normalize_trade_date(d.get("date"))
 
-    def top_turnover(self, n):
-        rows = self.get(f"{self.OPEN}/exchangeReport/STOCK_DAY_ALL")
+    def _turnover_frame(self, rows):
         df = pd.DataFrame(rows)
+        if df.empty:
+            raise ValueError("成交值資料為空")
         cols = {
-            "code": next(c for c in ["Code","證券代號"] if c in df.columns),
-            "name": next(c for c in ["Name","證券名稱"] if c in df.columns),
-            "value": next(c for c in ["TradeValue","成交金額"] if c in df.columns),
+            "code": next(c for c in ["Code", "證券代號"] if c in df.columns),
+            "name": next(c for c in ["Name", "證券名稱"] if c in df.columns),
+            "value": next(c for c in ["TradeValue", "成交金額"] if c in df.columns),
         }
         def optional(names):
             return next((c for c in names if c in df.columns), None)
@@ -63,7 +75,64 @@ class Twse:
         })
         out = out[out["code"].str.fullmatch(r"\d{4}", na=False)]
         out = out[~out["code"].str.startswith("00")]
-        return out.sort_values("trade_value", ascending=False).head(n).reset_index(drop=True)
+        return out.dropna(subset=["trade_value"]).sort_values("trade_value", ascending=False)
+
+    def _top_turnover_from_mi_index(self, base_date):
+        payload = self.get(
+            f"{self.BASE}/rwd/zh/afterTrading/MI_INDEX",
+            {"date": base_date, "type": "ALLBUT0999", "response": "json"},
+            retries=3,
+        )
+        # New TWSE response stores multiple tables. Locate the stock table by fields.
+        for table in payload.get("tables", []) if isinstance(payload, dict) else []:
+            fields = table.get("fields") or []
+            if "證券代號" in fields and "成交金額" in fields:
+                return self._turnover_frame([
+                    dict(zip(fields, row)) for row in (table.get("data") or [])
+                ])
+        # Compatibility with older response keys such as fields9/data9.
+        if isinstance(payload, dict):
+            for key, fields in payload.items():
+                if not key.startswith("fields") or not isinstance(fields, list):
+                    continue
+                if "證券代號" in fields and "成交金額" in fields:
+                    rows = payload.get(key.replace("fields", "data"), [])
+                    return self._turnover_frame([dict(zip(fields, row)) for row in rows])
+        raise ValueError("MI_INDEX 找不到個股成交行情表")
+
+    def _fallback_liquid_stocks(self):
+        # Last-resort universe. Histories are still fetched live, so the report can finish
+        # even when the ranking endpoint blocks GitHub-hosted runners.
+        stocks = [
+            ("2330", "台積電"), ("2317", "鴻海"), ("2454", "聯發科"),
+            ("2308", "台達電"), ("2382", "廣達"), ("3231", "緯創"),
+            ("2881", "富邦金"), ("2882", "國泰金"), ("2891", "中信金"),
+            ("2886", "兆豐金"), ("2303", "聯電"), ("3711", "日月光投控"),
+            ("2412", "中華電"), ("2603", "長榮"), ("2609", "陽明"),
+            ("2615", "萬海"), ("2002", "中鋼"), ("1301", "台塑"),
+            ("1303", "南亞"), ("6505", "台塑化"), ("3037", "欣興"),
+            ("2327", "國巨"), ("2379", "瑞昱"), ("2345", "智邦"),
+        ]
+        return pd.DataFrame([
+            {"code": code, "name": name, "trade_value": 0.0,
+             "close": float("nan"), "change": float("nan"), "volume": float("nan")}
+            for code, name in stocks
+        ])
+
+    def top_turnover(self, n, base_date=None):
+        errors = []
+        try:
+            rows = self.get(f"{self.OPEN}/exchangeReport/STOCK_DAY_ALL", retries=3)
+            return self._turnover_frame(rows).head(n).reset_index(drop=True), "TWSE OpenAPI"
+        except Exception as e:
+            errors.append(f"OpenAPI: {e}")
+        if base_date:
+            try:
+                return self._top_turnover_from_mi_index(base_date).head(n).reset_index(drop=True), "TWSE MI_INDEX 備援"
+            except Exception as e:
+                errors.append(f"MI_INDEX: {e}")
+        fallback = self._fallback_liquid_stocks().head(n).reset_index(drop=True)
+        return fallback, "固定高流動性清單（成交值排行來源失敗：" + " | ".join(errors) + "）"
 
     def stock_month(self, code, qd):
         p = self.get(f"{self.BASE}/rwd/zh/afterTrading/STOCK_DAY",
