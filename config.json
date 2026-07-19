@@ -1,0 +1,9 @@
+{
+  "top_n": 20,
+  "request_timeout": 25,
+  "max_workers": 6,
+  "news_hours": 36,
+  "enable_news": true,
+  "enable_global_market": true,
+  "open_report_after_run": true
+}
