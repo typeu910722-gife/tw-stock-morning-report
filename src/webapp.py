@@ -73,7 +73,7 @@ MANIFEST = {
     ],
 }
 
-SW_JS = r'''const CACHE='tw-stock-report-v5-1';
+SW_JS = r'''const CACHE='tw-stock-report-v6-0';
 const CORE=['./','index.html','manifest.webmanifest','reports/latest.html','reports/index.json','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -119,8 +119,15 @@ def build_mobile_site(base: Path, latest_report: Path) -> Path:
     icons_dir.mkdir(parents=True, exist_ok=True)
 
     all_reports = sorted((base / "outputs").rglob("台股日報_*.html"), reverse=True)
+    # 僅保留最近 60 份，避免儲存庫隨時間無限膨脹。
+    for old in all_reports[60:]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+    all_reports = all_reports[:60]
     report_items = []
-    for src in all_reports[:60]:
+    for src in all_reports:
         date_text = _trade_date_from_name(src)
         dest_name = src.name
         shutil.copy2(src, reports_dir / dest_name)

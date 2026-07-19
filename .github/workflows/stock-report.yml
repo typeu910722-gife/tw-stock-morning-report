@@ -2,21 +2,67 @@ name: Stock Report
 
 on:
   workflow_dispatch:
+  schedule:
+    # 台灣時間週一至週五 07:40；GitHub cron 使用 UTC。
+    - cron: "40 23 * * 0-4"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: stock-report-pages
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate Report
+      - name: Generate report and mobile site
+        env:
+          CI: "true"
+          TZ: Asia/Taipei
         run: python main.py
+
+      - name: Save generated reports to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f outputs site
+          if git diff --cached --quiet; then
+            echo "No generated file changes."
+          else
+            git commit -m "chore: update stock report"
+            git push
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
