@@ -1,7 +1,13 @@
 {
-  "latest_trade_date": "2026/08/26",
-  "generated": "2026/08/27 13:01",
+  "latest_trade_date": "2026/08/28",
+  "generated": "2026/08/28 15:04",
   "reports": [
+    {
+      "trade_date": "20260828",
+      "label": "2026/08/28",
+      "filename": "台股日報_20260828.html",
+      "path": "reports/台股日報_20260828.html"
+    },
     {
       "trade_date": "20260826",
       "label": "2026/08/26",
