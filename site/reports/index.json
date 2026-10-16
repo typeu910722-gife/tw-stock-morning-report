@@ -1,7 +1,13 @@
 {
-  "latest_trade_date": "2026/10/14",
-  "generated": "2026/10/15 09:50",
+  "latest_trade_date": "2026/10/15",
+  "generated": "2026/10/16 09:39",
   "reports": [
+    {
+      "trade_date": "20261015",
+      "label": "2026/10/15",
+      "filename": "台股日報_20261015.html",
+      "path": "reports/台股日報_20261015.html"
+    },
     {
       "trade_date": "20261014",
       "label": "2026/10/14",
@@ -355,12 +361,6 @@
       "label": "2026/07/20",
       "filename": "台股日報_20260720.html",
       "path": "reports/台股日報_20260720.html"
-    },
-    {
-      "trade_date": "20260717",
-      "label": "2026/07/17",
-      "filename": "台股日報_20260717.html",
-      "path": "reports/台股日報_20260717.html"
     }
   ]
 }
